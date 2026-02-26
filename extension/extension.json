@@ -1,0 +1,101 @@
+{
+	"name": "easyeda-mcp-bridge",
+	"uuid": "2d3bf38ca4a545dea404a70b46c1db03",
+	"displayName": "MCP Bridge",
+	"description": "WebSocket bridge between EasyEDA Pro and Claude Code MCP server",
+	"version": "0.2.0",
+	"publisher": "BlackMesaTech",
+	"engines": {
+		"eda": "^2.0.0"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "extension-store",
+		"url": ""
+	},
+	"categories": "Other",
+	"keywords": [
+		"MCP",
+		"Claude",
+		"AI"
+	],
+	"images": {
+		"logo": "./images/logo.png"
+	},
+	"homepage": "",
+	"bugs": "",
+	"activationEvents": {},
+	"entry": "./dist/index",
+	"dependentExtensions": {},
+	"headerMenus": {
+		"home": [
+			{
+				"id": "MCP Bridge",
+				"title": "MCP Bridge",
+				"menuItems": [
+					{
+						"id": "Connect",
+						"title": "Connect to MCP Server",
+						"registerFn": "connect"
+					},
+					{
+						"id": "Disconnect",
+						"title": "Disconnect",
+						"registerFn": "disconnect"
+					},
+					{
+						"id": "Status",
+						"title": "Connection Status",
+						"registerFn": "status"
+					}
+				]
+			}
+		],
+		"sch": [
+			{
+				"id": "MCP Bridge",
+				"title": "MCP Bridge",
+				"menuItems": [
+					{
+						"id": "Connect",
+						"title": "Connect to MCP Server",
+						"registerFn": "connect"
+					},
+					{
+						"id": "Disconnect",
+						"title": "Disconnect",
+						"registerFn": "disconnect"
+					},
+					{
+						"id": "Status",
+						"title": "Connection Status",
+						"registerFn": "status"
+					}
+				]
+			}
+		],
+		"pcb": [
+			{
+				"id": "MCP Bridge",
+				"title": "MCP Bridge",
+				"menuItems": [
+					{
+						"id": "Connect",
+						"title": "Connect to MCP Server",
+						"registerFn": "connect"
+					},
+					{
+						"id": "Disconnect",
+						"title": "Disconnect",
+						"registerFn": "disconnect"
+					},
+					{
+						"id": "Status",
+						"title": "Connection Status",
+						"registerFn": "status"
+					}
+				]
+			}
+		]
+	}
+}

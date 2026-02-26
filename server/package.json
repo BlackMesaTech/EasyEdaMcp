@@ -1,0 +1,23 @@
+{
+  "name": "easyeda-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for EasyEDA Pro integration with Claude Code",
+  "author": "BlackMesaTech",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.0",
+    "ws": "^8.18.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.0",
+    "typescript": "^5.7.0"
+  }
+}
