@@ -3,7 +3,7 @@
 	"uuid": "2d3bf38ca4a545dea404a70b46c1db03",
 	"displayName": "MCP Bridge",
 	"description": "WebSocket bridge between EasyEDA Pro and Claude Code MCP server",
-	"version": "0.2.0",
+	"version": "0.3.1",
 	"publisher": "BlackMesaTech",
 	"engines": {
 		"eda": "^2.0.0"

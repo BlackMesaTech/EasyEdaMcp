@@ -19,6 +19,16 @@ const handlers: Record<string, CommandHandler> = {
     return await eda.dmt_Project.getProjectInfo(params.projectUuid as string);
   },
 
+  'dmt.project.createProject': async (params) => {
+    const friendlyName = params.name as string;
+    const description = params.description as string | undefined;
+    return await eda.dmt_Project.createProject(friendlyName, undefined, undefined, undefined, description);
+  },
+
+  'dmt.project.openProject': async (params) => {
+    return await eda.dmt_Project.openProject(params.projectUuid as string);
+  },
+
   // ── Document selection ───────────────────────────────────
 
   'dmt.selectControl.getCurrentDocumentInfo': async () => {
@@ -31,39 +41,24 @@ const handlers: Record<string, CommandHandler> = {
     return await eda.dmt_EditorControl.openDocument(params.documentUuid as string);
   },
 
+  'dmt.editorControl.closeDocument': async (params) => {
+    return await eda.dmt_EditorControl.closeDocument(params.tabId as string);
+  },
+
   'dmt.editorControl.getCurrentRenderedAreaImage': async () => {
+    // pro-api 0.2.29: returns Promise<Blob | undefined>.
     const result = await eda.dmt_EditorControl.getCurrentRenderedAreaImage();
-    if (!result) return { error: 'API returned null/undefined', type: typeof result };
+    if (!result) return { error: 'API returned no image (null/undefined)' };
+    if (result.size === 0) return { error: 'API returned an empty image Blob', size: 0 };
 
-    // Check if it's a Blob
-    if (result instanceof Blob) {
-      if (result.size === 0) return { error: 'API returned empty Blob', size: 0 };
-      const arrayBuffer = await result.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = '';
-      for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      const base64 = btoa(binary);
-      return { mimeType: result.type || 'image/png', base64 };
+    const arrayBuffer = await result.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
     }
-
-    // If it's already a string (data URI or base64), try to use it directly
-    if (typeof result === 'string') {
-      if (result.startsWith('data:')) {
-        const match = result.match(/^data:([^;]+);base64,(.+)$/);
-        if (match) return { mimeType: match[1], base64: match[2] };
-      }
-      return { mimeType: 'image/png', base64: result };
-    }
-
-    // Unknown type — return debug info
-    return {
-      error: 'Unexpected return type',
-      type: typeof result,
-      constructor: (result as any)?.constructor?.name,
-      keys: typeof result === 'object' ? Object.keys(result as object) : undefined,
-    };
+    const base64 = btoa(binary);
+    return { mimeType: result.type || 'image/png', base64 };
   },
 
   'dmt.editorControl.zoomToAllPrimitives': async () => {
@@ -133,10 +128,22 @@ const handlers: Record<string, CommandHandler> = {
     return await eda.dmt_Schematic.getCurrentSchematicPageInfo();
   },
 
+  'dmt.schematic.createSchematic': async (params) => {
+    return await eda.dmt_Schematic.createSchematic(params.boardName as string | undefined);
+  },
+
+  'dmt.schematic.createSchematicPage': async (params) => {
+    return await eda.dmt_Schematic.createSchematicPage(params.schematicUuid as string);
+  },
+
   // ── PCBs ─────────────────────────────────────────────────
 
   'dmt.pcb.getAllPcbsInfo': async () => {
     return await eda.dmt_Pcb.getAllPcbsInfo();
+  },
+
+  'dmt.pcb.createPcb': async (params) => {
+    return await eda.dmt_Pcb.createPcb(params.boardName as string | undefined);
   },
 
   'dmt.pcb.getPcbInfo': async (params) => {
@@ -154,11 +161,18 @@ const handlers: Record<string, CommandHandler> = {
   },
 
   'dmt.board.getBoardInfo': async (params) => {
-    return await eda.dmt_Board.getBoardInfo(params.boardUuid as string);
+    // DMT_Board is keyed by board NAME, not uuid, in pro-api 0.2.29.
+    return await eda.dmt_Board.getBoardInfo(params.boardName as string);
   },
 
   'dmt.board.getCurrentBoardInfo': async () => {
     return await eda.dmt_Board.getCurrentBoardInfo();
+  },
+
+  'dmt.board.createBoard': async (params) => {
+    const schematicUuid = params.schematicUuid as string | undefined;
+    const pcbUuid = params.pcbUuid as string | undefined;
+    return await eda.dmt_Board.createBoard(schematicUuid, pcbUuid);
   },
 };
 

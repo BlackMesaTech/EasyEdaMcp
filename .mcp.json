@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "easyeda": {
+      "command": "node",
+      "args": ["./server/dist/index.js"],
+      "env": {
+        "EASYEDA_WS_PORT": "3000"
+      }
+    }
+  }
+}

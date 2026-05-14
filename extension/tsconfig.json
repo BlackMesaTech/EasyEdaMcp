@@ -8,6 +8,7 @@
 		"moduleResolution": "Node10",
 		"resolveJsonModule": true,
 		"allowJs": true,
+		"skipLibCheck": true,
 		"strict": true,
 		"strictBindCallApply": true,
 		"strictFunctionTypes": true,

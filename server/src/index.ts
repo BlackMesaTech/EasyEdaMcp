@@ -11,19 +11,33 @@ import { registerExportTools } from './tools/export.js';
 import { registerEditorTools } from './tools/editor.js';
 import { registerJlcpcbTools } from './tools/jlcpcb.js';
 
-const WS_PORT = parseInt(process.env.EASYEDA_WS_PORT ?? '3000', 10);
+function resolvePort(): number {
+  const raw = process.env.EASYEDA_WS_PORT;
+  if (raw === undefined) return 3000;
+  const port = Number.parseInt(raw, 10);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    logger.warn(`Invalid EASYEDA_WS_PORT "${raw}" — falling back to 3000`);
+    return 3000;
+  }
+  return port;
+}
 
 async function main(): Promise<void> {
-  // Start the WebSocket bridge (extension connects to this)
-  const bridge = new WsBridge(WS_PORT);
+  const wsPort = resolvePort();
 
-  // Create the MCP server
+  // Start the WebSocket bridge (extension connects to this).
+  const bridge = new WsBridge(wsPort);
+
+  // Fail fast on bind errors (e.g. port already in use) before connecting MCP stdio.
+  await bridge.waitUntilListening();
+
+  // Create the MCP server.
   const server = new McpServer({
     name: 'easyeda-pro',
-    version: '0.1.0',
+    version: '0.2.0',
   });
 
-  // Register all tool categories
+  // Register all tool categories.
   registerConnectionTools(server, bridge);
   registerProjectTools(server, bridge);
   registerSchematicTools(server, bridge);
@@ -31,29 +45,28 @@ async function main(): Promise<void> {
   registerLibraryTools(server, bridge);
   registerExportTools(server, bridge);
   registerEditorTools(server, bridge);
-  registerJlcpcbTools(server);  // No bridge needed — direct HTTP
+  registerJlcpcbTools(server); // No bridge needed — direct HTTP.
 
-  // Connect to Claude Code via stdio
+  // Connect to the MCP client (e.g. Claude Code) via stdio.
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
   logger.log('EasyEDA Pro MCP server running');
-  logger.log(`WebSocket bridge on ws://127.0.0.1:${WS_PORT}`);
+  logger.log(`WebSocket bridge on ws://127.0.0.1:${wsPort}`);
   logger.log('Waiting for EasyEDA Pro extension to connect...');
 
-  // Graceful shutdown
-  process.on('SIGINT', () => {
-    logger.log('Shutting down...');
+  // Graceful shutdown.
+  const shutdown = (signal: string) => {
+    logger.log(`Received ${signal} — shutting down...`);
     bridge.close();
+    void server.close();
     process.exit(0);
-  });
-  process.on('SIGTERM', () => {
-    bridge.close();
-    process.exit(0);
-  });
+  };
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 
 main().catch((err) => {
-  logger.error('Fatal error:', err);
+  logger.error('Fatal error:', err instanceof Error ? err.message : err);
   process.exit(1);
 });
