@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { WsBridge } from '../ws-bridge.js';
 
@@ -11,6 +10,7 @@ export function registerConnectionTools(server: McpServer, bridge: WsBridge): vo
         'Returns connection status and extension info. Call this first to verify ' +
         'the extension is available before using other EasyEDA tools.',
       inputSchema: {},
+      annotations: { readOnlyHint: true },
     },
     async () => {
       const status = bridge.getStatus();

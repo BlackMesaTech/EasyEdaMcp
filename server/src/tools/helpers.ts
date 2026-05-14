@@ -8,7 +8,9 @@ export async function bridgeTool(
 ): Promise<{ content: Array<{ type: 'text'; text: string }>; isError?: boolean }> {
   try {
     const result = await bridge.sendCommand(command, params);
-    const text = result === undefined ? 'null' : JSON.stringify(result, null, 2);
+    const text = result == null
+      ? 'Command succeeded. The EasyEDA API returned no data.'
+      : JSON.stringify(result, null, 2);
     return {
       content: [{ type: 'text' as const, text }],
     };

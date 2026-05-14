@@ -70,8 +70,12 @@ function main() {
 		zip.file(file, fs.createReadStream(path.join(__dirname, '../', file)));
 	}
 
+	// Ensure the output directory exists — createWriteStream does not create it.
+	const outDir = path.join(__dirname, 'dist');
+	fs.ensureDirSync(outDir);
+
 	zip.generateNodeStream({ type: 'nodebuffer', streamFiles: true, compression: 'DEFLATE', compressionOptions: { level: 9 } }).pipe(
-		fs.createWriteStream(path.join(__dirname, 'dist', `${extensionConfig.name}_v${extensionConfig.version}.eext`)),
+		fs.createWriteStream(path.join(outDir, `${extensionConfig.name}_v${extensionConfig.version}.eext`)),
 	);
 }
 

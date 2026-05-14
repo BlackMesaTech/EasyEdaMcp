@@ -1,9 +1,7 @@
 import type { CommandHandler } from '../handler-registry';
 import { fileToBase64 } from './utils';
 
-/** Export handlers are mostly defined in the pcb.ts handler module
- *  since they come from pcb_ManufactureData. This file exists for
- *  schematic-side exports. */
+/** Schematic-side export handlers (PCB exports live in pcb.ts via pcb_ManufactureData). */
 
 const handlers: Record<string, CommandHandler> = {
 
@@ -12,13 +10,16 @@ const handlers: Record<string, CommandHandler> = {
     return fileToBase64(file);
   },
 
-  'sch.manufactureData.getPdfFile': async () => {
-    const file = await eda.sch_ManufactureData.getPdfFile();
+  'sch.manufactureData.getNetlistFile': async () => {
+    const file = await eda.sch_ManufactureData.getNetlistFile();
     return fileToBase64(file);
   },
 
-  'sch.manufactureData.getDxfFile': async () => {
-    const file = await eda.sch_ManufactureData.getDxfFile();
+  // Schematic PDF/PNG/SVG export goes through getExportDocumentFile in pro-api 0.2.29
+  // (SCH_ManufactureData has no getPdfFile/getDxfFile — those are PCB-only).
+  'sch.manufactureData.getPdfFile': async () => {
+    // 'PDF' is ESCH_ExportDocumentFileType.PDF
+    const file = await eda.sch_ManufactureData.getExportDocumentFile(undefined, 'PDF' as any);
     return fileToBase64(file);
   },
 };

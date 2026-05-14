@@ -21,24 +21,59 @@ interface JlcComponent {
 
 interface JlcResponse {
   code: number;
+  message?: string;
   data: {
     componentPageInfo: {
       total: number;
       list: JlcComponent[];
     };
-  };
+  } | null;
 }
 
+const REQUEST_TIMEOUT_MS = 15_000;
+
 async function searchJlcpcb(body: Record<string, unknown>): Promise<JlcResponse> {
-  const response = await fetch(JLCPCB_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw new Error(`JLCPCB API error: ${response.status} ${response.statusText}`);
+  let response: Response;
+  try {
+    response = await fetch(JLCPCB_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+          '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'TimeoutError') {
+      throw new Error(`JLCPCB request timed out after ${REQUEST_TIMEOUT_MS}ms. Try again later.`);
+    }
+    throw new Error(`JLCPCB request failed: ${err instanceof Error ? err.message : String(err)}`);
   }
-  return response.json() as Promise<JlcResponse>;
+
+  if (!response.ok) {
+    throw new Error(`JLCPCB API error: HTTP ${response.status} ${response.statusText}`);
+  }
+
+  // JLCPCB sometimes serves HTML (rate-limit / captcha pages) with HTTP 200.
+  const raw = await response.text();
+  let json: JlcResponse;
+  try {
+    json = JSON.parse(raw) as JlcResponse;
+  } catch {
+    throw new Error(
+      `JLCPCB returned a non-JSON response (HTTP ${response.status}) — ` +
+      `the endpoint may be rate-limiting or blocking requests. Body: ${raw.slice(0, 200)}`,
+    );
+  }
+
+  if (json.code !== 200 || !json.data?.componentPageInfo) {
+    throw new Error(`JLCPCB API returned code ${json.code}: ${json.message ?? 'no data'}`);
+  }
+  return json;
 }
 
 /** Attributes that are generic/noisy — skip these in compact output. */
@@ -90,8 +125,8 @@ function formatComponent(c: JlcComponent): string {
 }
 
 function formatResults(data: JlcResponse): string {
-  const info = data.data.componentPageInfo;
-  const comps = info.list;
+  const info = data.data!.componentPageInfo;
+  const comps = info.list ?? [];
 
   if (comps.length === 0) {
     return 'No parts found matching your search.';
@@ -117,7 +152,7 @@ export function registerJlcpcbTools(server: McpServer): void {
           'Part type filter: "base" = JLCPCB basic parts (cheapest, most stock), ' +
           '"expand" = extended parts, "all" = both'
         ),
-        limit: z.number().optional().default(10).describe('Maximum results to return (default: 10, max: 100)'),
+        limit: z.number().int().min(1).max(100).optional().default(10).describe('Maximum results to return (default: 10, max: 100)'),
       },
     },
     async ({ keyword, libraryType, limit }) => {
@@ -156,15 +191,19 @@ export function registerJlcpcbTools(server: McpServer): void {
         package: z.string().optional().describe('Package (e.g., "0402", "0603", "0805")'),
         tolerance: z.string().optional().describe('Tolerance (e.g., "1%", "5%")'),
         libraryType: z.enum(['all', 'base', 'expand']).optional().default('all').describe('Part type filter'),
-        limit: z.number().optional().default(10).describe('Maximum results'),
+        limit: z.number().int().min(1).max(100).optional().default(10).describe('Maximum results'),
       },
     },
     async ({ resistance, package: pkg, tolerance, libraryType, limit }) => {
       try {
-        const parts = ['resistor'];
+        // Note: the literal word "resistor" poisons JLCPCB's ranking (it floats
+        // placeholder "Assembly" parts to the top), so we only fall back to it
+        // when no concrete filters were given.
+        const parts: string[] = [];
         if (resistance) parts.push(resistance);
         if (pkg) parts.push(pkg);
         if (tolerance) parts.push(tolerance);
+        if (parts.length === 0) parts.push('resistor');
 
         const body: Record<string, unknown> = {
           keyword: parts.join(' '),
@@ -200,15 +239,18 @@ export function registerJlcpcbTools(server: McpServer): void {
         package: z.string().optional().describe('Package (e.g., "0402", "0603", "0805")'),
         voltage: z.string().optional().describe('Voltage rating (e.g., "25V", "50V")'),
         libraryType: z.enum(['all', 'base', 'expand']).optional().default('all').describe('Part type filter'),
-        limit: z.number().optional().default(10).describe('Maximum results'),
+        limit: z.number().int().min(1).max(100).optional().default(10).describe('Maximum results'),
       },
     },
     async ({ capacitance, package: pkg, voltage, libraryType, limit }) => {
       try {
-        const parts = ['capacitor'];
+        // See note in jlcpcb_search_resistors — the word "capacitor" poisons
+        // JLCPCB's ranking, so use it only as a last-resort fallback.
+        const parts: string[] = [];
         if (capacitance) parts.push(capacitance);
         if (pkg) parts.push(pkg);
         if (voltage) parts.push(voltage);
+        if (parts.length === 0) parts.push('capacitor');
 
         const body: Record<string, unknown> = {
           keyword: parts.join(' '),
